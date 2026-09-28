@@ -1,0 +1,76 @@
+/* Receipt — sized for 80mm thermal printers (also prints fine on A4). */
+
+* { box-sizing: border-box; }
+body.receipt-page {
+    margin: 0;
+    background: #efe7de;
+    color: #111;
+    font-family: Consolas, "Courier New", monospace;
+}
+
+.receipt-toolbar {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px;
+    font-family: "Segoe UI", system-ui, sans-serif;
+}
+.receipt-toolbar button,
+.receipt-toolbar a {
+    padding: 9px 18px;
+    border: 1px solid #6b4028;
+    border-radius: 6px;
+    background: #6b4028;
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+.receipt-toolbar a { background: #fff; color: #6b4028; }
+
+.receipt {
+    width: 80mm;
+    margin: 0 auto 32px;
+    padding: 6mm 5mm;
+    background: #fff;
+    font-size: 12px;
+    line-height: 1.4;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, .12);
+}
+.receipt p { margin: 0; }
+.receipt hr { margin: 8px 0; border: 0; border-top: 1px dashed #444; }
+
+.receipt__head { text-align: center; }
+.receipt__head h1 { margin: 0 0 4px; font-size: 16px; }
+
+.receipt__meta { margin: 0; }
+.receipt__meta div,
+.receipt .row { display: flex; justify-content: space-between; gap: 10px; }
+.receipt__meta dt { margin: 0; }
+.receipt__meta dd { margin: 0; text-align: right; }
+
+.item + .item { margin-top: 4px; }
+.item .row { padding-left: 10px; }
+
+.receipt .grand { margin-top: 4px; font-size: 15px; font-weight: 700; }
+
+.receipt__foot { text-align: center; }
+.receipt__foot .small { margin-top: 6px; font-size: 10px; color: #555; }
+
+.void-stamp {
+    margin: 8px 0 !important;
+    border: 3px solid #b3261e;
+    color: #b3261e;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 8px;
+    text-align: center;
+}
+
+@page { margin: 4mm; }
+@media print {
+    body.receipt-page { background: #fff; }
+    .no-print { display: none !important; }
+    .receipt { width: 72mm; margin: 0; padding: 0; box-shadow: none; }
+}

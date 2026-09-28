@@ -1,0 +1,278 @@
+<?php
+declare(strict_types=1);
+
+require __DIR__ . '/../system/bootstrap.php';
+$page = require_page('pos');
+
+$stmt = db()->prepare('SELECT id, name, icon FROM categories WHERE is_active = ? ORDER BY sort_order, name');
+$stmt->execute([1]);
+$categories = $stmt->fetchAll();
+
+$customers = Customers::active();
+$vatRate   = (float) setting('vat_rate', '12');
+$vatLabel  = rtrim(rtrim(number_format($vatRate, 2, '.', ''), '0'), '.');
+
+$pageStyles  = ['css/pos.css'];
+$pageScripts = ['js/pos.js'];
+
+require ROOT_PATH . '/includes/header.php';
+?>
+
+<div class="pos" id="pos"
+     data-user-id="<?= (int) Auth::id() ?>"
+     data-vat-rate="<?= e((string) $vatRate) ?>"
+     data-currency="<?= e(config('app.currency')) ?>"
+     data-icons="<?= e(asset('img/icons.svg')) ?>"
+     data-receipt-url="<?= e(url('pages/receipt.php')) ?>">
+
+    <!-- ============ Products ============ -->
+    <section class="pos-products panel" aria-label="Products">
+        <div class="tabs" role="tablist" aria-label="Categories">
+            <button type="button" class="tab is-active" role="tab" aria-selected="true" data-category="all">
+                <?= icon('grid') ?> All Items
+            </button>
+            <?php foreach ($categories as $cat): ?>
+                <button type="button" class="tab" role="tab" aria-selected="false" data-category="<?= (int) $cat['id'] ?>">
+                    <?= icon($cat['icon']) ?> <?= e($cat['name']) ?>
+                </button>
+            <?php endforeach; ?>
+        </div>
+
+        <div class="product-grid" id="productGrid">
+            <p class="product-grid__state">Loading products…</p>
+        </div>
+
+        <footer class="pos-summary">
+            <div>
+                <?= icon('barcode') ?>
+                <span><small>Total Items</small><strong id="sumItems">0</strong></span>
+            </div>
+            <div>
+                <?= icon('box') ?>
+                <span><small>Total Stock Value</small><strong id="sumValue"><?= e(money(0)) ?></strong></span>
+            </div>
+            <div>
+                <?= icon('clock') ?>
+                <span><small>Last Updated</small><strong id="sumUpdated">—</strong></span>
+            </div>
+        </footer>
+    </section>
+
+    <!-- ============ Current sale ============ -->
+    <section class="pos-cart panel" aria-label="Current sale">
+        <header class="cart-head">
+            <?= icon('cart') ?>
+            <h2>Current Sale</h2>
+            <span class="cart-head__no">No. <span id="saleNo"><?= e(Sales::nextNumber()) ?></span></span>
+        </header>
+
+        <div class="cart-fields">
+            <div class="cart-field">
+                <span class="cart-field__icon"><?= icon('user') ?></span>
+                <label for="customerSelect">Customer</label>
+                <select id="customerSelect">
+                    <option value="">Walk-in Customer</option>
+                    <?php foreach ($customers as $c): ?>
+                        <option value="<?= (int) $c['id'] ?>"><?= e($c['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="button" class="icon-btn" id="addCustomerBtn" aria-label="Add new customer" title="Add new customer">
+                    <?= icon('plus') ?>
+                </button>
+            </div>
+            <div class="cart-field">
+                <span class="cart-field__icon"><?= icon('wallet') ?></span>
+                <label for="paymentSelect">Payment Type</label>
+                <select id="paymentSelect" class="cart-field__wide">
+                    <?php foreach (Sales::PAYMENT_TYPES as $value => $label): ?>
+                        <option value="<?= e($value) ?>"><?= e($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
+
+        <div class="cart-table-wrap">
+            <table class="cart-table">
+                <thead>
+                <tr>
+                    <th class="c-n">#</th>
+                    <th>Item</th>
+                    <th class="c-qty">Qty</th>
+                    <th class="num c-price">Unit Price</th>
+                    <th class="num">Total</th>
+                    <th class="c-act">Action</th>
+                </tr>
+                </thead>
+                <tbody id="cartBody"></tbody>
+            </table>
+            <div class="cart-empty" id="cartEmpty">
+                <?= icon('cart') ?>
+                <p>No items yet</p>
+                <small>Click a product or scan a barcode (F2)</small>
+            </div>
+        </div>
+
+        <div class="totals">
+            <div class="totals__row">
+                <span>Sub Total</span>
+                <strong id="tSubtotal"><?= e(money(0)) ?></strong>
+            </div>
+            <div class="totals__row">
+                <label for="discountInput">Discount <small class="muted" id="tDiscount"></small></label>
+                <span class="discount-input">
+                    <input id="discountInput" type="number" min="0" max="100" step="0.01" value="0" inputmode="decimal">
+                    <span>%</span>
+                </span>
+            </div>
+            <div class="totals__row">
+                <span>VAT (<?= e($vatLabel) ?>%)</span>
+                <strong id="tVat"><?= e(money(0)) ?></strong>
+            </div>
+            <div class="totals__grand">
+                <span>Total Amount</span>
+                <strong id="tTotal"><?= e(money(0)) ?></strong>
+            </div>
+        </div>
+
+        <div class="pos-actions">
+            <button type="button" class="pos-btn pos-btn--light" id="btnNew"><?= icon('file') ?><span>New Sale</span></button>
+            <button type="button" class="pos-btn pos-btn--brown" id="btnSave"><?= icon('save') ?><span>Save</span></button>
+            <button type="button" class="pos-btn pos-btn--green" id="btnPrint"><?= icon('printer') ?><span>Print</span></button>
+            <button type="button" class="pos-btn pos-btn--red" id="btnCancel"><?= icon('x') ?><span>Cancel</span></button>
+        </div>
+
+        <div class="shortcut-bar">
+            <?= icon('tag') ?>
+            <span>Press <kbd>F2</kbd> to scan barcode</span><i>|</i>
+            <span><kbd>F3</kbd> to search item</span><i>|</i>
+            <span><kbd>F4</kbd> to add item</span>
+        </div>
+    </section>
+</div>
+
+<!-- ============ Templates (filled by pos.js with textContent — no HTML injection) ============ -->
+<template id="productCardTpl">
+    <button type="button" class="product-card">
+        <span class="product-card__media"></span>
+        <span class="product-card__incart" hidden></span>
+        <span class="product-card__name"></span>
+        <span class="product-card__code"></span>
+        <span class="product-card__price"></span>
+        <span class="product-card__foot">
+            <span class="stock-pill"></span>
+            <span class="product-card__add"><?= icon('plus') ?></span>
+        </span>
+    </button>
+</template>
+
+<template id="cartRowTpl">
+    <tr>
+        <td class="c-n"></td>
+        <td class="cart-row__name"><strong></strong><small></small></td>
+        <td class="c-qty">
+            <span class="qty">
+                <button type="button" data-act="dec" aria-label="Decrease quantity"><?= icon('minus') ?></button>
+                <input type="number" min="1" step="1" inputmode="numeric" aria-label="Quantity">
+                <button type="button" data-act="inc" aria-label="Increase quantity"><?= icon('plus') ?></button>
+            </span>
+        </td>
+        <td class="num c-price cart-row__price"></td>
+        <td class="num cart-row__total"></td>
+        <td class="c-act">
+            <button type="button" class="icon-btn icon-btn--danger" data-act="remove" aria-label="Remove item"><?= icon('trash') ?></button>
+        </td>
+    </tr>
+</template>
+
+<!-- ============ Payment dialog ============ -->
+<dialog class="modal" id="payDialog" aria-labelledby="payTitle">
+    <form class="modal__body" id="payForm" novalidate>
+        <header class="modal__head">
+            <h2 id="payTitle">Complete Sale</h2>
+            <button type="button" class="modal__close" data-close aria-label="Close"><?= icon('x') ?></button>
+        </header>
+
+        <div class="pay-total">
+            <small>Total Amount</small>
+            <strong id="payTotal"></strong>
+            <span class="badge" id="payMethod"></span>
+        </div>
+
+        <div id="cashFields">
+            <label class="field">
+                <span class="field__label">Amount Received</span>
+                <span class="field__control">
+                    <span class="field__prefix"><?= e(config('app.currency')) ?></span>
+                    <input id="payAmount" type="text" inputmode="decimal" autocomplete="off" maxlength="12">
+                </span>
+            </label>
+            <div class="quick-cash" id="quickCash"></div>
+            <div class="pay-change" id="payChangeBox">
+                <span id="payChangeLabel">Change</span>
+                <strong id="payChange"></strong>
+            </div>
+        </div>
+
+        <p class="pay-error" id="payError" role="alert" hidden></p>
+
+        <footer class="modal__foot">
+            <button type="button" class="btn btn--light" data-close>Back</button>
+            <button type="submit" class="btn btn--primary" id="payConfirm">Confirm Payment</button>
+        </footer>
+    </form>
+</dialog>
+
+<!-- ============ Sale completed dialog ============ -->
+<dialog class="modal" id="doneDialog" aria-labelledby="doneTitle">
+    <div class="modal__body done">
+        <span class="done__icon"><?= icon('check') ?></span>
+        <h2 id="doneTitle">Sale Completed</h2>
+        <p class="muted">No. <strong id="doneNo"></strong></p>
+        <div class="done__grid">
+            <span>Total</span><strong id="doneTotal"></strong>
+            <span>Paid</span><strong id="donePaid"></strong>
+            <span>Change</span><strong id="doneChange" class="done__change"></strong>
+        </div>
+        <footer class="modal__foot modal__foot--split">
+            <button type="button" class="btn btn--success" id="donePrint"><?= icon('printer') ?> Print Receipt</button>
+            <button type="button" class="btn btn--primary" id="doneNew" autofocus>New Sale</button>
+        </footer>
+    </div>
+</dialog>
+
+<!-- ============ Quick add customer ============ -->
+<dialog class="modal" id="customerDialog" aria-labelledby="customerTitle">
+    <form class="modal__body" id="customerForm" novalidate>
+        <header class="modal__head">
+            <h2 id="customerTitle">Add Customer</h2>
+            <button type="button" class="modal__close" data-close aria-label="Close"><?= icon('x') ?></button>
+        </header>
+        <label class="field">
+            <span class="field__label">Name *</span>
+            <span class="field__control field__control--plain">
+                <input name="name" required maxlength="100" autocomplete="off">
+            </span>
+        </label>
+        <label class="field">
+            <span class="field__label">Phone</span>
+            <span class="field__control field__control--plain">
+                <input name="phone" maxlength="30" inputmode="tel" autocomplete="off" placeholder="0917 123 4567">
+            </span>
+        </label>
+        <label class="field">
+            <span class="field__label">Email</span>
+            <span class="field__control field__control--plain">
+                <input name="email" type="email" maxlength="120" autocomplete="off">
+            </span>
+        </label>
+        <p class="pay-error" id="customerError" role="alert" hidden></p>
+        <footer class="modal__foot">
+            <button type="button" class="btn btn--light" data-close>Cancel</button>
+            <button type="submit" class="btn btn--primary">Save Customer</button>
+        </footer>
+    </form>
+</dialog>
+
+<iframe id="receiptFrame" class="receipt-frame" title="Receipt printer" tabindex="-1" aria-hidden="true"></iframe>
+
+<?php require ROOT_PATH . '/includes/footer.php'; ?>

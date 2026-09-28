@@ -1,0 +1,136 @@
+<?php
+declare(strict_types=1);
+
+require __DIR__ . '/../system/bootstrap.php';
+$page = require_page('customers');
+
+$id       = input_int($_GET, 'id', 1);
+$customer = null;
+if ($id !== null) {
+    $customer = Customers::find($id) ?? throw new HttpException(404, 'Customer not found.');
+}
+$page['title'] = $customer ? $customer['name'] : 'Add Customer';
+$returnTo = safe_return($_POST['return'] ?? $_GET['return'] ?? null, 'customers.php');
+$self     = 'customer-form.php?' . http_build_query(array_filter(['id' => $id, 'return' => $returnTo]));
+
+// ---------------------------------------------------------------------
+// Save
+// ---------------------------------------------------------------------
+if (is_post()) {
+    Csrf::verifyRequest();
+    [$data, $errors] = Customers::check($_POST, $id);
+
+    if ($errors) {
+        flash_old(array_filter($_POST, 'is_string'));
+        flash_errors($errors);
+        flash('error', 'Please fix the highlighted fields.');
+        redirect('pages/' . $self);
+    }
+
+    if ($customer) {
+        Customers::update($id, $data);
+        flash('success', "{$data['name']} was updated.");
+    } else {
+        Customers::create($data);
+        flash('success', "{$data['name']} was added.");
+    }
+    redirect('pages/' . $returnTo);
+}
+
+// ---------------------------------------------------------------------
+// Form + purchase history
+// ---------------------------------------------------------------------
+$stats  = $customer ? Customers::stats($id) : null;
+$recent = $customer ? Customers::recentSales($id, 10) : [];
+$val    = static fn (string $key): string => old($key, (string) ($customer[$key] ?? ''));
+$paymentLabels = Sales::PAYMENT_TYPES;
+
+require ROOT_PATH . '/includes/header.php';
+?>
+
+<div class="page-head">
+    <div>
+        <a class="back-link" href="<?= e(url('pages/' . $returnTo)) ?>"><?= icon('arrow-left') ?> Customers</a>
+        <h1><?= e($customer ? $customer['name'] : 'Add Customer') ?></h1>
+        <?php if ($customer): ?>
+            <p class="muted">
+                Customer since <?= e(date('M j, Y', strtotime($customer['created_at']))) ?>
+                <?php if ((int) $customer['is_active'] !== 1): ?> · <span class="badge">Inactive</span><?php endif; ?>
+            </p>
+        <?php endif; ?>
+    </div>
+</div>
+
+<div class="customer-layout<?= $customer ? '' : ' customer-layout--single' ?>">
+    <form class="card card--pad" method="post" action="<?= e(url('pages/' . $self)) ?>" novalidate>
+        <?= Csrf::field() ?>
+        <input type="hidden" name="return" value="<?= e($returnTo) ?>">
+        <h2 class="card__title">Details</h2>
+
+        <div class="form-grid">
+            <label class="form-field form-field--full">
+                <span class="form-label">Name *</span>
+                <input class="form-input" name="name" maxlength="100" required value="<?= e($val('name')) ?>"<?= invalid('name') ?>>
+                <?= field_error('name') ?>
+            </label>
+            <label class="form-field">
+                <span class="form-label">Phone</span>
+                <input class="form-input" name="phone" maxlength="30" inputmode="tel" placeholder="0917 123 4567"
+                       value="<?= e($val('phone')) ?>"<?= invalid('phone') ?>>
+                <?= field_error('phone') ?>
+            </label>
+            <label class="form-field">
+                <span class="form-label">Email</span>
+                <input class="form-input" type="email" name="email" maxlength="120" value="<?= e($val('email')) ?>"<?= invalid('email') ?>>
+                <?= field_error('email') ?>
+            </label>
+            <label class="form-field form-field--full">
+                <span class="form-label">Address</span>
+                <input class="form-input" name="address" maxlength="255" value="<?= e($val('address')) ?>"<?= invalid('address') ?>>
+                <?= field_error('address') ?>
+            </label>
+        </div>
+
+        <div class="form-actions form-actions--inline">
+            <a class="btn btn--light" href="<?= e(url('pages/' . $returnTo)) ?>">Cancel</a>
+            <button type="submit" class="btn btn--primary"><?= icon('save') ?> <?= $customer ? 'Save Changes' : 'Add Customer' ?></button>
+        </div>
+    </form>
+
+    <?php if ($customer): ?>
+        <section class="card">
+            <header class="card__head"><h2><?= icon('receipt') ?> Purchase History</h2></header>
+            <div class="mini-stats">
+                <div><small>Visits</small><strong><?= (int) $stats['visits'] ?></strong></div>
+                <div><small>Total spent</small><strong><?= e(money($stats['spent'])) ?></strong></div>
+                <div><small>Average</small><strong><?= e(money($stats['average'])) ?></strong></div>
+                <div><small>Last visit</small><strong><?= $stats['last_visit'] ? e(date('M j, Y', strtotime($stats['last_visit']))) : '—' ?></strong></div>
+            </div>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead><tr><th>Sale No.</th><th>Date</th><th class="num">Items</th><th>Payment</th><th class="num">Total</th><th></th></tr></thead>
+                    <tbody>
+                    <?php foreach ($recent as $s): ?>
+                        <tr>
+                            <td><strong><?= e($s['sale_no']) ?></strong><?= $s['status'] === 'cancelled' ? ' <span class="badge badge--danger">Void</span>' : '' ?></td>
+                            <td><?= e(date('M j, Y g:i A', strtotime($s['created_at']))) ?></td>
+                            <td class="num"><?= (int) $s['items'] ?></td>
+                            <td><span class="badge"><?= e($paymentLabels[$s['payment_type']] ?? $s['payment_type']) ?></span></td>
+                            <td class="num"><?= e(money($s['total'])) ?></td>
+                            <td class="num">
+                                <a class="icon-btn icon-btn--sm" href="<?= e(url('pages/receipt.php?id=' . (int) $s['id'])) ?>" target="_blank" rel="noopener"
+                                   title="Open receipt" aria-label="Open receipt <?= e($s['sale_no']) ?>"><?= icon('external') ?></a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php if (!$recent): ?>
+                        <tr><td colspan="6" class="empty">No purchases yet.</td></tr>
+                    <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    <?php endif; ?>
+</div>
+
+<?php require ROOT_PATH . '/includes/footer.php'; ?>

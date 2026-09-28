@@ -1,0 +1,6 @@
+.env
+storage/logs/*
+!storage/logs/.gitkeep
+assets/uploads/products/*
+!assets/uploads/products/sample-*.png
+!assets/uploads/products/.gitkeep

@@ -1,0 +1,2 @@
+# Internal files — never served directly (PHP includes them from disk).
+Require all denied

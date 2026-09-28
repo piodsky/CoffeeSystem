@@ -1,0 +1,10 @@
+# Uploads: serve images only, never run scripts.
+Options -Indexes
+Require all denied
+<FilesMatch "\.(jpe?g|png|webp|gif)$">
+    Require all granted
+</FilesMatch>
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set Content-Security-Policy "default-src 'none'"
+</IfModule>

@@ -1,0 +1,14 @@
+# Brew & Bean POS — web server rules (Apache / XAMPP)
+Options -Indexes
+DirectoryIndex index.php
+
+# Block dotfiles (.env, .htaccess, .gitignore) and dumps/docs/logs
+<FilesMatch "(^\.|\.(sql|md|log|ini|bak|example)$)">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header setifempty X-Frame-Options "DENY"
+    Header set Referrer-Policy "same-origin"
+</IfModule>
