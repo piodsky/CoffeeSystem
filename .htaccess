@@ -1,4 +1,4 @@
-# Brew & Bean POS — web server rules (Apache / XAMPP)
+# EXECOM Logistics POS — web server rules (Apache / XAMPP)
 Options -Indexes
 DirectoryIndex index.php
 

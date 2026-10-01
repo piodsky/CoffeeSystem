@@ -2,7 +2,7 @@
 /**
  * Hardened session handling:
  *  - strict mode, cookie-only, HttpOnly, SameSite=Lax, Secure on HTTPS
- *  - cookie scoped to this app's path (/CoffeeSystem/)
+ *  - cookie scoped to this app's path (/EXECOMLOGISTICS/)
  *  - user-agent binding, periodic session ID rotation
  *  - optional auto-logout (SESSION_IDLE_TIMEOUT / SESSION_ABSOLUTE_TIMEOUT, 0 = off)
  */
@@ -27,7 +27,7 @@ final class Session
         ini_set('session.cookie_httponly', '1');
         ini_set('session.gc_maxlifetime', (string) $lifetime);
 
-        session_name((string) config('app.session.name', 'BREWBEAN_SID'));
+        session_name((string) config('app.session.name', 'EXECOM_SID'));
         session_set_cookie_params([
             'lifetime' => 0,
             'path'     => base_path() . '/',

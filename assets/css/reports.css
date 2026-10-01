@@ -1,0 +1,158 @@
+/* =====================================================================
+   Reports (Phase 3)
+   Chart tokens: one series -> palette slot 1 (validated vs the white card surface);
+   gridlines one step off the surface; text stays in text tokens, never the series color.
+   ===================================================================== */
+
+.reports-root,
+body[data-page="reports"] {
+    --series-1: #2a78d6;
+    --series-1-hover: #5598e7;
+    --chart-grid: #e6ebf2;
+    --chart-baseline: #c3cbd6;
+    --chart-ink-muted: #66758c;
+}
+
+/* ---------- Filters (one row above everything they scope) ---------- */
+.report-filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 14px; overflow: hidden; }
+.report-filters .quick-ranges { flex: 1 1 auto; border-bottom: 0; background: none; }
+.report-range { border-bottom: 0; padding: 10px 16px; }
+
+.report-period { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 14px; font-size: 14px; }
+.report-period .icon { width: 18px; height: 18px; color: var(--primary); }
+
+/* ---------- KPI tiles ---------- */
+.kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.kpi { align-items: flex-start; }
+.kpi .stat__value { white-space: nowrap; }
+.kpi__delta { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 13px; font-weight: 600; }
+.kpi__delta .icon { width: 16px; height: 16px; }
+.kpi__delta small { font-weight: 400; color: var(--text-muted); }
+.kpi__delta--up { color: #1a7a3e; }
+.kpi__delta--down { color: #c42f2f; }
+.kpi__delta--flat { color: var(--text-muted); }
+
+/* ---------- Cards ---------- */
+.report-card { margin-bottom: 16px; }
+.report-card .card__head { gap: 12px; flex-wrap: wrap; min-height: 62px; }
+.card__sub { padding: 10px 18px 0; font-size: 13px; }
+.report-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.report-grid .report-card { margin-bottom: 0; }
+.report-grid + .report-section,
+.report-grid + .report-grid { margin-top: 16px; }
+.report-section { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin: 28px 0 14px; font-size: 20px; }
+.report-section .muted { font-size: 14px; font-weight: 400; }
+.report-note { display: flex; align-items: center; gap: 8px; padding: 0 18px 12px; font-size: 13px; color: var(--text-muted); }
+.report-note .icon { width: 16px; height: 16px; }
+
+.chart-empty { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 40px 16px; color: var(--text-muted); }
+
+/* ---------- Column chart (drawn by reports.js as SVG) ---------- */
+.chart-box { padding: 14px 18px 6px; }
+.column-chart { position: relative; min-height: 280px; }
+.column-chart svg { display: block; width: 100%; overflow: visible; }
+.column-chart svg:focus { outline: none; }
+.column-chart svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+.cc-grid { stroke: var(--chart-grid); stroke-width: 1; shape-rendering: crispEdges; }
+.cc-baseline { stroke: var(--chart-baseline); stroke-width: 1; shape-rendering: crispEdges; }
+.cc-tick { fill: var(--chart-ink-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.cc-bar { fill: var(--series-1); transition: fill .12s; }
+.cc-bar.is-active { fill: var(--series-1-hover); }
+.cc-hit { fill: transparent; cursor: default; }
+.cc-hit.is-active { fill: rgba(42, 120, 214, .06); }
+.cc-peak { fill: var(--text); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ---------- Table view twin ---------- */
+.table-view { border-top: 1px solid var(--border); }
+.table-view summary {
+    padding: 10px 18px;
+    color: var(--primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    list-style-position: inside;
+}
+.table-view[open] summary { border-bottom: 1px solid var(--border); }
+.table-view .table-wrap { max-height: 360px; overflow-y: auto; }
+.table-view tr.is-zero td { color: var(--text-muted); }
+
+/* ---------- Horizontal bar lists ---------- */
+.barlist { display: grid; gap: 2px; margin: 0; padding: 10px 10px 14px; list-style: none; }
+.barlist__row {
+    display: grid;
+    grid-template-columns: minmax(110px, 38%) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 8px;
+    border-radius: var(--radius-sm);
+    outline: none;
+}
+.barlist__row:hover,
+.barlist__row:focus-visible { background: var(--surface-2); }
+.barlist__row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.barlist__row:hover .bar,
+.barlist__row:focus-visible .bar { fill: var(--series-1-hover); }
+.barlist__label { min-width: 0; overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.barlist__label small { font-weight: 400; color: var(--text-muted); }
+.barlist__bar { display: block; overflow: visible; }
+.barlist__bar .bar { fill: var(--series-1); transition: fill .12s; }
+.barlist__value { min-width: 92px; font-size: 14px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.segmented-links { display: inline-flex; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2); }
+.segmented-links a { padding: 4px 12px; border-radius: 999px; color: var(--text-muted); font-size: 13px; font-weight: 600; text-decoration: none; }
+.segmented-links a:hover { color: var(--text); }
+.segmented-links a.is-active { background: #fff; color: var(--primary); box-shadow: 0 1px 2px rgba(15, 35, 70, .12); }
+
+.status-badge { display: inline-flex; align-items: center; gap: 4px; }
+.status-badge .icon { width: 14px; height: 14px; }
+#lowStockTable .empty .icon { width: 18px; height: 18px; color: var(--success); }
+
+/* ---------- Tooltip (shared by the column chart and bar lists) ---------- */
+.chart-tip {
+    position: fixed;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 140px;
+    max-width: 260px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(15, 35, 70, .16);
+    pointer-events: none;
+}
+.chart-tip__value { font-size: 16px; font-variant-numeric: tabular-nums; }
+.chart-tip__title { font-size: 13px; color: var(--text); }
+.chart-tip__title::before {
+    content: "";
+    display: inline-block;
+    width: 12px;
+    height: 2px;
+    margin: 0 6px 3px 0;
+    border-radius: 1px;
+    background: var(--series-1);
+    vertical-align: middle;
+}
+.chart-tip__note { font-size: 12px; color: var(--text-muted); }
+.chart-tip__note:empty { display: none; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1200px) {
+    .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .report-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+    .kpis { grid-template-columns: minmax(0, 1fr); }
+    .barlist__row { grid-template-columns: minmax(0, 1fr) auto; }
+    .barlist__bar { grid-column: 1 / -1; grid-row: 2; }
+}
+
+/* ---------- Print ---------- */
+@media print {
+    .no-print, .chart-tip, .table-view summary { display: none !important; }
+    .report-card, .stat { break-inside: avoid; box-shadow: none; }
+    .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .report-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

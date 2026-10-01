@@ -30,6 +30,9 @@ if (is_post()) {
 
     $result = Auth::attempt($username, $password);
     if ($result['ok']) {
+        if (in_array($password, Users::DEFAULT_PASSWORDS, true)) {
+            flash('warning', 'You signed in with a default password. Please change it now: user menu (top right) → Change Password.');
+        }
         redirect(Auth::intendedUrl());
     }
 
@@ -52,14 +55,14 @@ $showDemo = config('app.env') === 'local';
 <main class="login">
     <section class="login__brand" aria-hidden="true">
         <div class="login__brand-inner">
-            <span class="login__logo"><?= icon('coffee') ?></span>
-            <h1>BREW &amp; BEAN</h1>
-            <p class="login__sub">COFFEE SHOP</p>
-            <p class="login__tagline">Point of Sale System</p>
+            <img class="login__logo" src="<?= e(asset('img/logo-mark.svg')) ?>" alt="" width="80" height="80">
+            <h1>EXECOM</h1>
+            <p class="login__sub">LOGISTICS</p>
+            <p class="login__tagline">POS &amp; Inventory System</p>
             <ul class="login__points">
                 <li><?= icon('check') ?> Fast checkout with barcode scanning</li>
                 <li><?= icon('check') ?> Live inventory &amp; stock alerts</li>
-                <li><?= icon('check') ?> Daily sales &amp; top-item reports</li>
+                <li><?= icon('check') ?> Sales, customers &amp; distribution in one place</li>
             </ul>
         </div>
     </section>
@@ -105,7 +108,7 @@ $showDemo = config('app.env') === 'local';
                 </div>
             <?php endif; ?>
         </form>
-        <p class="login__foot">© <?= date('Y') ?> Brew &amp; Bean Coffee Shop · v<?= e(config('app.version')) ?></p>
+        <p class="login__foot">© <?= date('Y') ?> EXECOM Logistics · v<?= e(config('app.version')) ?></p>
     </section>
 </main>
 <script src="<?= e(asset('js/app.js')) ?>" defer></script>

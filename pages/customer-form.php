@@ -112,7 +112,7 @@ require ROOT_PATH . '/includes/header.php';
                     <tbody>
                     <?php foreach ($recent as $s): ?>
                         <tr>
-                            <td><strong><?= e($s['sale_no']) ?></strong><?= $s['status'] === 'cancelled' ? ' <span class="badge badge--danger">Void</span>' : '' ?></td>
+                            <td><a class="item-cell__name" href="<?= e(url('pages/sale-view.php?id=' . (int) $s['id'])) ?>"><?= e($s['sale_no']) ?></a><?= $s['status'] === 'cancelled' ? ' <span class="badge badge--danger">Voided</span>' : '' ?></td>
                             <td><?= e(date('M j, Y g:i A', strtotime($s['created_at']))) ?></td>
                             <td class="num"><?= (int) $s['items'] ?></td>
                             <td><span class="badge"><?= e($paymentLabels[$s['payment_type']] ?? $s['payment_type']) ?></span></td>

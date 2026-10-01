@@ -1,8 +1,9 @@
 <?php
 /**
  * Authentication & role checks.
- * Only the user ID is kept in the session; the user row is reloaded on
- * every request, so disabling a user or changing a role applies at once.
+ * Only the user ID (and a stamp of the password hash) is kept in the session; the user row
+ * is reloaded on every request, so disabling a user, changing a role or resetting a
+ * password applies at once (a new password ends that user's other sessions).
  */
 declare(strict_types=1);
 
@@ -61,7 +62,7 @@ final class Auth
         $_SESSION = [];
         Session::regenerate();
         Csrf::rotate();
-        $_SESSION['auth'] = ['id' => $userId];
+        $_SESSION['auth'] = ['id' => $userId, 'pw' => self::passwordStamp($userId)];
         if (is_string($intended)) {
             $_SESSION['_intended'] = $intended;
         }
@@ -85,15 +86,39 @@ final class Auth
             self::$loaded = true;
             $id = $_SESSION['auth']['id'] ?? null;
             if (is_int($id)) {
-                $stmt = db()->prepare('SELECT id, username, full_name, role FROM users WHERE id = ? AND is_active = 1 LIMIT 1');
+                $stmt = db()->prepare('SELECT id, username, full_name, role, password_hash FROM users WHERE id = ? AND is_active = 1 LIMIT 1');
                 $stmt->execute([$id]);
-                self::$user = $stmt->fetch() ?: null;
-                if (self::$user === null) {
-                    unset($_SESSION['auth']); // deleted or disabled while logged in
+                $row   = $stmt->fetch() ?: null;
+                $stamp = $row ? hash('sha256', $row['password_hash']) : '';
+                if ($row !== null && !isset($_SESSION['auth']['pw'])) {
+                    $_SESSION['auth']['pw'] = $stamp; // session from before stamps existed
+                }
+                if ($row === null || !hash_equals((string) $_SESSION['auth']['pw'], $stamp)) {
+                    unset($_SESSION['auth']); // deleted, disabled, or password changed elsewhere
+                    self::$user = null;
+                } else {
+                    unset($row['password_hash']);
+                    self::$user = $row;
                 }
             }
         }
         return self::$user;
+    }
+
+    /** Hash of the stored password hash: changes whenever the password does. */
+    private static function passwordStamp(int $userId): string
+    {
+        $stmt = db()->prepare('SELECT password_hash FROM users WHERE id = ?');
+        $stmt->execute([$userId]);
+        return hash('sha256', (string) $stmt->fetchColumn());
+    }
+
+    /** Keep the current session signed in after the user changes their own password. */
+    public static function refreshPasswordStamp(): void
+    {
+        if (isset($_SESSION['auth']['id'])) {
+            $_SESSION['auth']['pw'] = self::passwordStamp((int) $_SESSION['auth']['id']);
+        }
     }
 
     public static function check(): bool

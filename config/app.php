@@ -5,7 +5,7 @@
 declare(strict_types=1);
 
 return [
-    'name'     => (string) Env::get('APP_NAME', 'Brew & Bean'),
+    'name'     => (string) Env::get('APP_NAME', 'EXECOM Logistics'),
     'env'      => (string) Env::get('APP_ENV', 'production'),
     'debug'    => (bool) Env::get('APP_DEBUG', false),
     'url'      => rtrim((string) Env::get('APP_URL', ''), '/'),
@@ -14,7 +14,7 @@ return [
     'version'  => '1.0.0',
 
     'session' => [
-        'name'             => (string) Env::get('SESSION_NAME', 'BREWBEAN_SID'),
+        'name'             => (string) Env::get('SESSION_NAME', 'EXECOM_SID'),
         // 0 = no auto-logout (user stays signed in until Logout or the browser closes)
         'idle_timeout'     => (int) Env::get('SESSION_IDLE_TIMEOUT', 0),
         'absolute_timeout' => (int) Env::get('SESSION_ABSOLUTE_TIMEOUT', 0),

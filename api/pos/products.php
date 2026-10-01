@@ -14,7 +14,7 @@ $stmt = db()->prepare(
        FROM products p
        JOIN categories c ON c.id = p.category_id
       WHERE p.is_active = ? AND c.is_active = ?
-      ORDER BY c.sort_order, p.code'
+      ORDER BY p.code'
 );
 $stmt->execute([1, 1]);
 

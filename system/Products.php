@@ -12,12 +12,12 @@ final class Products
 
     /** Adjustment reasons: key => [label, allowed direction] */
     public const REASONS = [
-        'restock' => ['Restock / delivery', 'add'],
-        'return'  => ['Customer return', 'add'],
-        'damaged' => ['Damaged / spilled', 'remove'],
-        'expired' => ['Expired', 'remove'],
-        'count'   => ['Stock count correction', 'both'],
-        'other'   => ['Other', 'both'],
+        'restock'  => ['Restock / delivery', 'add'],
+        'return'   => ['Customer return', 'add'],
+        'damaged'  => ['Damaged / defective', 'remove'],
+        'supplier' => ['Returned to supplier (RMA)', 'remove'],
+        'count'    => ['Stock count correction', 'both'],
+        'other'    => ['Other', 'both'],
     ];
 
     public static function categories(): array
@@ -130,7 +130,7 @@ final class Products
             $errors['category_id'] = 'Choose a category.';
         }
         if (!preg_match('/^[A-Z0-9][A-Z0-9-]{1,19}$/', $data['code'])) {
-            $errors['code'] = 'Use 2–20 letters, numbers or dashes (e.g. CF-009).';
+            $errors['code'] = 'Use 2–20 letters, numbers or dashes (e.g. ITM-0013).';
         } elseif (self::taken('code', $data['code'], $id)) {
             $errors['code'] = 'Another product already uses this code.';
         }

@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
-export const BASE = 'http://localhost/CoffeeSystem';
+export const BASE = 'http://localhost/EXECOMLOGISTICS';
 const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

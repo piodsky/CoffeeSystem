@@ -1,5 +1,5 @@
 /**
- * Brew & Bean POS — global scripts (every page).
+ * EXECOM Logistics POS — global scripts (every page).
  * Exposes window.BB for page scripts: BB.api(), BB.baseUrl, BB.csrf.
  */
 (function () {
@@ -82,10 +82,17 @@
         if (msg && !window.confirm(msg)) e.preventDefault();
     });
 
-    // ---- Dialogs: any [data-close] button closes its <dialog> ----------
+    // ---- Dialogs: [data-close] closes its <dialog>; [data-open="id"] opens one ----
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-close]');
         if (btn) btn.closest('dialog')?.close();
+
+        const opener = e.target.closest('[data-open]');
+        const dialog = opener && document.getElementById(opener.dataset.open);
+        if (dialog instanceof HTMLDialogElement && !dialog.open) {
+            dialog.showModal();
+            dialog.querySelector('textarea, input:not([type=hidden]), select')?.focus();
+        }
     });
 
     // ---- Live clock in the header --------------------------------------
