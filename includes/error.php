@@ -12,13 +12,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= e($title) ?> · Brew &amp; Bean POS</title>
+    <title><?= e($title) ?> · EXECOM Logistics POS</title>
     <link rel="icon" href="<?= e(asset('img/favicon.svg')) ?>" type="image/svg+xml">
     <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>">
 </head>
 <body class="page-error">
     <main class="error-card">
-        <span class="error-card__icon"><?= icon($code === 403 ? 'lock' : 'coffee') ?></span>
+        <span class="error-card__icon"><?= icon($code === 403 ? 'lock' : 'box') ?></span>
         <p class="error-card__code"><?= (int) $code ?></p>
         <h1><?= e($title) ?></h1>
         <p class="error-card__msg"><?= e($message) ?></p>

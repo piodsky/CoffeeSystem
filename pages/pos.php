@@ -136,7 +136,7 @@ require ROOT_PATH . '/includes/header.php';
 
         <div class="pos-actions">
             <button type="button" class="pos-btn pos-btn--light" id="btnNew"><?= icon('file') ?><span>New Sale</span></button>
-            <button type="button" class="pos-btn pos-btn--brown" id="btnSave"><?= icon('save') ?><span>Save</span></button>
+            <button type="button" class="pos-btn pos-btn--blue" id="btnSave"><?= icon('save') ?><span>Save</span></button>
             <button type="button" class="pos-btn pos-btn--green" id="btnPrint"><?= icon('printer') ?><span>Print</span></button>
             <button type="button" class="pos-btn pos-btn--red" id="btnCancel"><?= icon('x') ?><span>Cancel</span></button>
         </div>

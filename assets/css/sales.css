@@ -1,0 +1,91 @@
+/* =====================================================================
+   Sales History list + sale details (Phase 2)
+   ===================================================================== */
+
+.badge--period { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; background: #dce9fc; color: #133d80; font-size: 13px; }
+.badge--period .icon { width: 16px; height: 16px; }
+.stat__value small { margin-left: 6px; }
+
+/* ---------- List ---------- */
+.nowrap { white-space: nowrap; }
+.sale-no { font-variant-numeric: tabular-nums; }
+.sales-table tr.is-void td { color: var(--text-muted); }
+.sales-table tr.is-void .sale-total { text-decoration: line-through; }
+
+/* ---------- Sale details ---------- */
+.sale-title { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.sale-title .badge { font-size: 13px; }
+
+.void-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    border: 1px solid #f5c2bf;
+    border-radius: var(--radius-sm);
+    background: var(--danger-bg);
+    color: #a82520;
+    font-size: 14px;
+}
+.void-box > .icon { margin-top: 1px; }
+.void-box__reason { margin-top: 4px; color: var(--text); }
+
+.sale-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 16px;
+    align-items: start;
+}
+
+.sale-totals {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding: 12px 16px 16px;
+    border-top: 1px solid var(--border);
+}
+.sale-totals > div { display: flex; justify-content: space-between; gap: 12px; padding: 5px 4px; }
+.sale-totals dt { color: var(--text-muted); }
+.sale-totals dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sale-totals__grand {
+    margin-top: 6px;
+    padding: 12px 14px !important;
+    border: 1px solid #c9dbf6;
+    border-radius: 8px;
+    background: #e6effc;
+    color: var(--primary-700);
+    font-size: 18px;
+    font-weight: 700;
+}
+.sale-totals .sale-totals__grand dt { color: inherit; }
+.sale-totals__grand dd { font-size: 22px; }
+.sale-totals.is-void .sale-totals__grand { border-color: #f5c2bf; background: var(--danger-bg); color: #a82520; }
+.sale-totals.is-void .sale-totals__grand dd { text-decoration: line-through; }
+
+
+.void-warning {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--danger-bg);
+    color: #a82520;
+    font-size: 14px;
+}
+.void-warning .icon { margin-top: 1px; }
+
+@media (max-width: 1100px) {
+    .sale-layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+.stat__value { white-space: nowrap; }
+
+/* Tablet: summary cards 2 x 2; drop the least important columns so Status + Actions stay visible */
+@media (max-width: 1200px) {
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sales-table .col-opt { display: none; }
+    .sales-table th, .sales-table td { padding-left: 10px; padding-right: 10px; }
+    .sales-table .sale-time { display: block; }
+}

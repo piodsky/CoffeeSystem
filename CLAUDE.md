@@ -1,29 +1,41 @@
-# CoffeeSystem: project memory for Claude
+# EXECOM Logistics POS: project memory for Claude
 
-Brew & Bean Coffee Shop POS. PHP 8.2 (XAMPP) + PDO + MariaDB 10.4, no framework, plain CSS, vanilla JS.
-DB: `coffee_db`, root / no password. URL: http://localhost/CoffeeSystem. UI follows the brown/cream mockup
-(dark topbar with logo/search/date/time/user/logout, dark sidebar, cream content).
+EXECOM Logistics POS & Inventory (IT products: laptops, peripherals, accessories, network, office supplies).
+Rebuilt from the earlier CoffeeSystem codebase: same architecture, new concept + blue theme.
+PHP 8.2 (XAMPP) + PDO + MariaDB 10.4, no framework, plain CSS, vanilla JS.
+DB: `execomlogistics_db`, root / no password. URL: http://localhost/EXECOMLOGISTICS. UI follows the navy/blue mockup
+(dark navy topbar with E logo/"POS SYSTEM Fast • Secure • Reliable"/search/date/time/user/logout, navy sidebar with
+mountain backdrop, light blue-gray content, blue Current Sale header, blue Save / green Print / red Cancel).
 Read this first; open only the files a task needs.
 
 ## Phase status
-- [x] Phase 1: database.sql, config, auth (login/logout/roles/throttle), layout, placeholder pages
-- [x] Phase 2: POS screen `pages/pos.php` + `assets/js/pos.js` + `assets/css/pos.css`; APIs `api/pos/products.php`,
-      `api/pos/checkout.php`, `api/customers/create.php`; receipt `pages/receipt.php` (+ receipt.css/js)
-- [x] Phase 3: Inventory `pages/inventory.php` (list + POST actions toggle/delete/adjust) + `pages/product-form.php`;
-      Customers `pages/customers.php` + `pages/customer-form.php` (purchase history). Classes `Products`,
-      `ImageUpload`, `Customers`. Stock audit table `stock_movements` (migration `migrations/003_phase3_inventory.sql`).
-      18 generated sample illustrations `assets/uploads/products/sample-<code>.png`.
-- [ ] Phase 4: Sales History (reprint via `pages/receipt.php?id=`, void completed sale = status cancelled + restock
-      + `Products::log(..., 'void', +qty, ...)`), Reports (daily sales, top items; old Phase 1 dashboard stats),
-      Settings (settings table, users CRUD with password_hash). Existing DBs need a migration file, not a re-import.
+- [x] Phase 1: full EXECOM rebrand of everything: database.sql (5 IT categories, 12 mockup products ITM-0001..0012,
+      4 sample sales), config/.env, auth, layout, POS (`pages/pos.php`, `assets/js/pos.js`, `api/pos/*`), receipt,
+      Inventory (`pages/inventory.php`, `pages/product-form.php`), Customers, stock audit (`stock_movements`),
+      12 sample illustrations `assets/uploads/products/sample-itm-000N.png`, logo `assets/img/logo-mark.svg`.
+- [x] Phase 2: Sales History `pages/sales-history.php` (+ `assets/css/sales.css`) and sale details `pages/sale-view.php`
+      (reprint, admin Void with reason). `Sales::count/search/summary/cashiers/void`, `input_date()` helper,
+      `[data-open]` dialog opener in app.js. Migration `migrations/002_phase2_sales_history.sql`
+      (sales.voided_at / voided_by / void_reason); database.sql already includes it.
+- [x] Phase 3: Reports `pages/reports.php` (+ `assets/css/reports.css`, `assets/js/reports.js`), queries in
+      `system/Reports.php`. No schema change (no migration). Icons added: trend-up, trend-down, download.
+      Shared filter styles (.date-field, .quick-ranges, .chip, .page-actions) moved to app.css.
+- [x] Phase 4: Settings `pages/settings.php` (company/VAT/receipt footer + preview), Users `pages/users.php` +
+      `pages/user-form.php`, My Account `pages/account.php` (all roles), tabs `includes/settings-nav.php`,
+      `assets/css/settings.css`, classes `system/Settings.php` + `system/Users.php`, password stamp in `Auth`.
+      No schema change. All four phases are done; the old coming-soon placeholder was removed.
+- Existing DBs need a migration file in `migrations/`, not a re-import.
 
 ## User decisions (don't revert)
 - **No auto-logout.** User said "don't use session expired". `SESSION_IDLE_TIMEOUT=0`,
   `SESSION_ABSOLUTE_TIMEOUT=0` (0 = off). Never show "session expired" wording.
-- Build in phases, zip + XAMPP setup steps each phase (zip goes to `~/Downloads/CoffeeSystem-phaseN.zip`).
+- Build in phases, zip + XAMPP setup steps each phase (zip goes to `~/Downloads/EXECOMLOGISTICS-phaseN.zip`).
+- Nothing coffee-related anywhere (names, icons, colors, sample data). CSS tokens are neutral:
+  `--navy-*`, `--primary`, `--primary-700/400`, `--accent`, `--surface`, `--surface-2`, `--bg`, `--border`.
+- Company address/phone/TIN in `settings` are placeholders until the user gives real ones (don't invent them).
 - Keep folders clean (`config/ system/ includes/ pages/ api/ assets/ storage/ tests/`, `.env`).
 
-## POS behaviour (Phase 2)
+## POS behaviour
 - Buttons: **Save** = payment dialog → complete sale (deduct stock). **Print** = same + auto-print; with an empty
   cart it reprints the last sale. **New Sale** / **Cancel** clear the cart (confirm). `held` status is unused so far.
 - Cart lives in the browser (+ localStorage `bb.pos.<userId>`); the server only receives product_id + qty and
@@ -32,7 +44,47 @@ Read this first; open only the files a task needs.
 - Keys: F2 scan (focus search), F3 search, F4 add highlighted card, ↑/↓ move highlight, Enter = exact barcode/code
   match else highlighted. Typing anywhere (scanner) goes to the search box.
 
-## Inventory / Customers behaviour (Phase 3)
+## Sales History behaviour (Phase 2)
+- List shows only completed + cancelled (never held). Search = sale_no, customer name, or any item name/code.
+  Filters: `search`, `from`/`to` (Y-m-d via `input_date()`, swapped if reversed, inclusive days), `status`,
+  `payment`, `cashier`. Summary (`Sales::summary`) ignores the status filter so voids are always counted.
+- Everyone with the page can view + reprint (`receipt.php?id=X&autoprint=1`, new tab). Void = admin only
+  (server-checked, 403 for cashier), reason 3–255 chars, `Sales::void()`: transaction, lock sale + products
+  `FOR UPDATE`, restock per product, `Products::log(..., 'void', +qty, ..., saleId)` with note
+  "Voided sale No. X: reason", then status 'cancelled' + voided_at/by/reason. Voiding twice → 409 message.
+- Stock History / customer purchase history link to `sale-view.php?id=`.
+- Tablet (≤1200px): Cashier + Items columns hidden (`.col-opt`), stats 2×2.
+
+## Reports behaviour (Phase 3, admin only)
+- `Reports::period(from, to)`: default last 30 days, swapped if reversed, clamped to today, max 3 years;
+  previous period = same length right before (KPI deltas). > 92 days → grouped by month.
+  All sales figures = status 'completed' only; voided shown as a footnote. Net = sales.total (incl. VAT);
+  item/category figures = sale_items.line_total (before discount & VAT) and are labelled so.
+- Charts follow the dataviz skill: single series → palette slot 1 `#2a78d6` (validated vs white card surface),
+  hover `#5598e7`; hairline solid grid; columns ≤ 24px, 4px rounded top, square base; only the peak is labelled;
+  every chart has a table twin (column chart: "Show as table"; bar lists print every value).
+  Column chart = SVG drawn by reports.js at real pixel width (ResizeObserver) from
+  `<script type="application/json" id="salesSeries">` (json_encode with JSON_HEX_*). Bar lists = server-rendered
+  `<svg><rect width="NN%">` (percent attributes, no inline style — CSP). One shared tooltip `#chartTip`
+  (hover + keyboard focus/arrow keys, textContent only; positioned via CSSOM `el.style.left`, which CSP allows).
+- `?export=csv` → UTF-8 BOM CSV (summary, series, top items); cells starting with = + - @ get a `'` prefix.
+- App is light-only, so charts have no dark mode.
+
+## Settings / Users behaviour (Phase 4)
+- Settings (admin): `Settings::validate/save` (upsert into `settings`); `Settings::PLACEHOLDERS` = the sample
+  address/phone → warning banner until replaced. VAT change affects new sales only (sales store vat_rate).
+- Users (admin, pages use `require_page('settings')`): rules live in `Users` (not just the UI): no
+  deactivate/delete/role change on your own account; always ≥ 1 active admin; users with sales can't be deleted
+  (sales.user_id is RESTRICT) → deactivate. Passwords: 8–72 chars, not containing the username, not in
+  `Users::WEAK`. Never `flash_old()` password fields.
+- Session password stamp: `$_SESSION['auth']['pw']` = sha256(password_hash); `Auth::user()` signs the session
+  out when it no longer matches (password reset elsewhere). Own change → `Auth::refreshPasswordStamp()`.
+  Sessions without a stamp (pre-Phase-4) are stamped lazily, never signed out for that.
+- Login flashes a warning when the password is one of `Users::DEFAULT_PASSWORDS`.
+- `includes/header.php` defines `$user`, `$activeKey`, `$roleName`, `$now`: don't use those names for page data
+  (user-form.php uses `$target`).
+
+## Inventory / Customers behaviour
 - Stock changes ONLY via sales or `Products::adjustStock()` (reasons in `Products::REASONS`, direction-checked);
   every change writes `stock_movements` (type initial/sale/restock/adjustment/void, signed qty, stock_after).
   The product edit form never edits stock; opening stock is set on create only.
@@ -72,14 +124,25 @@ Read this first; open only the files a task needs.
 - VAT 12% applied on (subtotal − discount); rate lives in `settings.vat_rate`.
 - `sale_items` stores code/name/price snapshots. Products are soft-deleted (`is_active=0`).
 - `products.stock` has CHECK >= 0; `reorder_level` drives low-stock pills.
-- Category icons: coffee, glass, croissant, cookie, bag.
+- Categories (sort order): Laptops & Computers (icon laptop), Peripherals (mouse), Accessories (plug),
+  Network (network), Office Supplies (clipboard). POS grid is ordered by `p.code` (matches the mockup).
+- Stock adjust reasons: restock, return, damaged (defective), supplier (RMA), count, other.
 
 ## Testing
 - Lint: `C:\xampp\php\php.exe -l file.php`
-- **E2E: `node tests/e2e-pos.mjs [outdir]`** (28 checks) and **`node tests/e2e-admin.mjs [outdir]`** (22 checks,
-  Phase 3 + icons.svg XML validity). Shared helpers in `tests/lib/browser.mjs` (login, nav, key, type, check, shot).
-  Both change data, so check `SELECT MAX(id) FROM sales` is 4 (sample only) before re-importing
+- **Node.js is NOT installed on this PC.** Use **`powershell -ExecutionPolicy Bypass -File tests\e2e-smoke.ps1 [outdir]`**
+  (75 checks: PowerShell + Edge DevTools protocol; login, mockup cart totals, F2/F3/F4, checkout, stock, receipt,
+  sales history filters, cashier can't void, admin void + restock + audit, reports (KPIs, chart hover/keys, top
+  items, CSV, monthly grouping), settings save → receipt, users rules, add user, My Account, new-user login,
+  logout, inventory, adjust reasons,
+  icons.svg XML, no JS/CSP errors). Screenshots go to `%TEMP%\execom-e2e`. Keep the .ps1 ASCII-only
+  (PowerShell 5.1 reads BOM-less files as ANSI): build ₱ with `[char]0x20B1`, use -like for dashes.
+  `tests/e2e-pos.mjs` / `tests/e2e-admin.mjs` (+ `tests/lib/browser.mjs`) are the Node versions, updated for the
+  EXECOM data but not runnable here.
+- Tests change data, so check `SELECT MAX(id) FROM sales` is 4 (sample only) before re-importing
   `C:\xampp\mysql\bin\mysql.exe -u root < database.sql` (drops tables!). If the user has real data, don't re-import.
+- Sample product images: SVGs rendered by `msedge --headless=new --default-background-color=00000000
+  --window-size=400,600 --screenshot=...`, then cropped to 400x400 (headless window size includes chrome).
 - File uploads in tests: `DOM.setFileInputFiles` with an objectId (see e2e-admin.mjs). With curl, use Windows paths.
 - Editing `assets/img/icons.svg`: keep a space between attributes; an XML error silently breaks later icons.
 - API tests: curl + cookie jar; CSRF from `<meta name="csrf-token">` sent as `X-CSRF-Token`.

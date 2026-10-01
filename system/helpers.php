@@ -30,7 +30,7 @@ function config(string $key, mixed $default = null): mixed
     return $value;
 }
 
-/** URL path of the app, e.g. "/CoffeeSystem" (no trailing slash). */
+/** URL path of the app, e.g. "/EXECOMLOGISTICS" (no trailing slash). */
 function base_path(): string
 {
     static $base = null;
@@ -168,6 +168,17 @@ function input_decimal(array $source, string $key, float $min = 0, float $max = 
     return ($value < $min || $value > $max) ? null : $value;
 }
 
+/** A real calendar date as 'Y-m-d' (from <input type="date">), or null if missing/invalid. */
+function input_date(array $source, string $key): ?string
+{
+    $raw = $source[$key] ?? null;
+    if (!is_string($raw) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) {
+        return null;
+    }
+    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $raw);
+    return $date && $date->format('Y-m-d') === $raw ? $raw : null;
+}
+
 /** Decode a JSON request body (AJAX), max 1 MB. */
 function request_json(): array
 {
@@ -180,7 +191,7 @@ function request_json(): array
 // Responses
 // ---------------------------------------------------------------------
 
-/** Redirect to an app path ("login.php") or an absolute path ("/CoffeeSystem/..."). */
+/** Redirect to an app path ("login.php") or an absolute path ("/EXECOMLOGISTICS/..."). */
 function redirect(string $to): never
 {
     header('Location: ' . (str_starts_with($to, '/') ? $to : url($to)), true, 303);
@@ -345,7 +356,7 @@ function paginate(int $total, int $perPage = 15): array
 
 /**
  * "Return to" target posted by a form, restricted to a page in /pages with a plain query
- * string (never another host or path), e.g. "inventory.php?q=latte&page=2".
+ * string (never another host or path), e.g. "inventory.php?q=laptop&page=2".
  */
 function safe_return(mixed $value, string $default): string
 {

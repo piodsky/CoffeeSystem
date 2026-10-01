@@ -31,16 +31,16 @@ $now       = new DateTimeImmutable();
     </button>
 
     <a class="brand" href="<?= e(url('pages/pos.php')) ?>">
-        <span class="brand__logo"><?= icon('coffee') ?></span>
+        <img class="brand__logo" src="<?= e(asset('img/logo-mark.svg')) ?>" alt="" width="46" height="46">
         <span class="brand__text">
-            <strong>BREW &amp; BEAN</strong>
-            <small>COFFEE SHOP</small>
+            <strong>EXECOM</strong>
+            <small>LOGISTICS</small>
         </span>
     </a>
 
     <div class="topbar__title">
         <strong>POS SYSTEM</strong>
-        <small>Fast <span>•</span> Simple <span>•</span> Reliable</small>
+        <small>Fast <span>•</span> Secure <span>•</span> Reliable</small>
     </div>
 
     <form class="topbar__search" action="<?= e(url('pages/pos.php')) ?>" method="get" role="search">
@@ -76,8 +76,10 @@ $now       = new DateTimeImmutable();
                 <strong><?= e($user['full_name']) ?></strong>
                 <small>@<?= e($user['username']) ?> · <?= e($roleName) ?></small>
             </div>
+            <a href="<?= e(url('pages/account.php')) ?>" id="myAccountLink"><?= icon('lock') ?> Change Password</a>
             <?php if (Auth::hasRole('admin')): ?>
                 <a href="<?= e(url('pages/settings.php')) ?>"><?= icon('settings') ?> Settings</a>
+                <a href="<?= e(url('pages/users.php')) ?>"><?= icon('user') ?> Users</a>
             <?php endif; ?>
             <form action="<?= e(url('logout.php')) ?>" method="post">
                 <?= Csrf::field() ?>

@@ -28,7 +28,7 @@ $date      = new DateTimeImmutable($sale['completed_at'] ?? $sale['created_at'])
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Receipt <?= e($sale['sale_no']) ?> · <?= e(setting('shop_name', 'Brew & Bean')) ?></title>
+    <title>Receipt <?= e($sale['sale_no']) ?> · <?= e(setting('shop_name', 'EXECOM Logistics')) ?></title>
     <link rel="icon" href="<?= e(asset('img/favicon.svg')) ?>" type="image/svg+xml">
     <link rel="stylesheet" href="<?= e(asset('css/receipt.css')) ?>">
 </head>
@@ -41,7 +41,7 @@ $date      = new DateTimeImmutable($sale['completed_at'] ?? $sale['created_at'])
 
 <article class="receipt">
     <header class="receipt__head">
-        <h1><?= e(setting('shop_name', 'Brew & Bean Coffee Shop')) ?></h1>
+        <h1><?= e(setting('shop_name', 'EXECOM Logistics')) ?></h1>
         <p><?= e(setting('shop_address')) ?></p>
         <p>Tel: <?= e(setting('shop_phone')) ?></p>
         <?php if (setting('shop_tin') !== ''): ?>
@@ -51,6 +51,9 @@ $date      = new DateTimeImmutable($sale['completed_at'] ?? $sale['created_at'])
 
     <?php if ($isVoid): ?>
         <p class="void-stamp">VOID</p>
+        <?php if ($sale['voided_at']): ?>
+            <p class="void-note">Voided <?= e(date('M j, Y g:i A', strtotime($sale['voided_at']))) ?><?= $sale['void_reason'] ? ': ' . e($sale['void_reason']) : '' ?></p>
+        <?php endif; ?>
     <?php endif; ?>
 
     <hr>

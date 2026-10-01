@@ -129,7 +129,7 @@ require ROOT_PATH . '/includes/header.php';
 
             <label class="form-field">
                 <span class="form-label">Product code *</span>
-                <input class="form-input form-input--mono" name="code" maxlength="20" required placeholder="CF-009"
+                <input class="form-input form-input--mono" name="code" maxlength="20" required placeholder="ITM-0013"
                        autocapitalize="characters" value="<?= e($val('code')) ?>"<?= invalid('code') ?>>
                 <?= field_error('code') ?>
             </label>
@@ -232,7 +232,7 @@ require ROOT_PATH . '/includes/header.php';
                         <td class="num"><?= (int) $m['stock_after'] ?></td>
                         <td>
                             <?php if ($m['sale_no']): ?>
-                                <a href="<?= e(url('pages/receipt.php?id=' . (int) $m['sale_id'])) ?>" target="_blank" rel="noopener">Sale <?= e($m['sale_no']) ?></a>
+                                <a href="<?= e(url('pages/sale-view.php?id=' . (int) $m['sale_id'])) ?>"><?= e($m['type'] === 'void' ? ($m['note'] ?? 'Voided sale No. ' . $m['sale_no']) : 'Sale No. ' . $m['sale_no']) ?></a>
                             <?php else: ?>
                                 <?= e($m['note'] ?? '') ?>
                             <?php endif; ?>

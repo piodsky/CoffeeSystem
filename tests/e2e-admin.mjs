@@ -6,7 +6,7 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openBrowser, BASE, sleep } from './lib/browser.mjs';
 
-const OUT = process.argv[2] || join(tmpdir(), 'brewbean-e2e');
+const OUT = process.argv[2] || join(tmpdir(), 'execom-e2e');
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const b = await openBrowser(OUT, 9335);
 const { send, evaluate, waitFor, shot, type, size, nav, text, check, login, reportProblems, close } = b;
@@ -37,15 +37,15 @@ try {
 
   // --- Inventory list ---
   await nav(`${BASE}/pages/inventory.php`);
-  check(await evaluate(`document.querySelectorAll('tbody tr').length`) === 15, 'inventory shows 15 rows per page');
-  check((await text('.pager__info')).endsWith('of 18'), 'pager says "of 18" → ' + await text('.pager__info'));
+  check(await evaluate(`document.querySelectorAll('tbody tr').length`) === 12, 'inventory lists all 12 products');
+  check((await text('.pager__info')).endsWith('of 12'), 'pager says "of 12" → ' + await text('.pager__info'));
   await shot('p3-2-inventory');
 
-  // --- Adjust stock dialog: remove 3 Iced Latte (damaged) ---
-  const before = Number(await evaluate(`${rowFor('Iced Latte')}.querySelector('[data-adjust]').dataset.stock`));
-  await evaluate(`${rowFor('Iced Latte')}.querySelector('[data-adjust]').click()`);
+  // --- Adjust stock dialog: remove 3 Keyboard (damaged) ---
+  const before = Number(await evaluate(`${rowFor('Keyboard')}.querySelector('[data-adjust]').dataset.stock`));
+  await evaluate(`${rowFor('Keyboard')}.querySelector('[data-adjust]').click()`);
   check(await evaluate(`document.getElementById('adjustDialog').open`), 'Adjust button opens the stock dialog');
-  check((await text('#adjustName')).startsWith('Iced Latte'), 'dialog shows the product name');
+  check((await text('#adjustName')).startsWith('Keyboard'), 'dialog shows the product name');
   await evaluate(`document.querySelector('#adjustDialog [value=remove]').click()`);
   check(await evaluate(`document.querySelector('#adjustReason option[value=restock]').disabled`), '"Restock" reason is disabled when removing');
   await type('3');
@@ -62,41 +62,41 @@ try {
   await shot('p3-4-form-errors');
 
   const fill = (name, value) => evaluate(`document.querySelector('[name=${name}]').value = ${JSON.stringify(value)}`);
-  await fill('name', 'Spanish Latte');
-  await fill('category_id', '1');
-  await fill('price', '135');
-  await fill('code', 'cf-009');
-  await fill('barcode', '4800000000200');
+  await fill('name', 'Wireless Router');
+  await fill('category_id', '4');
+  await fill('price', '1850');
+  await fill('code', 'itm-0013');
+  await fill('barcode', '4806500000134');
   await fill('stock', '20');
   const { result } = await send('Runtime.evaluate', { expression: `document.getElementById('imageInput')` });
   await send('DOM.setFileInputFiles', {
     objectId: result.objectId,
-    files: [join(ROOT, 'assets/uploads/products/sample-cf-005.png')],
+    files: [join(ROOT, 'assets/uploads/products/sample-itm-0006.png')],
   });
   await waitFor(`document.getElementById('imagePreviewImg').src.startsWith('blob:')`, 'image preview');
   check(true, 'choosing a file shows a preview');
   await shot('p3-5-product-form');
   await submitAndWait(`document.querySelector('.form-layout')`);
-  check((await flash()) === 'Spanish Latte was added to the inventory.', 'product added → ' + await flash());
+  check((await flash()) === 'Wireless Router was added to the inventory.', 'product added → ' + await flash());
 
-  await nav(`${BASE}/pages/inventory.php?search=spanish`);
-  check(await evaluate(`${rowFor('Spanish Latte')}.querySelector('.thumb img')?.naturalWidth > 0`), 'new product has its uploaded image');
-  check(await evaluate(`${rowFor('Spanish Latte')}.textContent.includes('CF-009')`), 'code saved in upper case (CF-009)');
+  await nav(`${BASE}/pages/inventory.php?search=router`);
+  check(await evaluate(`${rowFor('Wireless Router')}.querySelector('.thumb img')?.naturalWidth > 0`), 'new product has its uploaded image');
+  check(await evaluate(`${rowFor('Wireless Router')}.textContent.includes('ITM-0013')`), 'code saved in upper case (ITM-0013)');
 
   // --- Edit page: history + image ---
-  await evaluate(`${rowFor('Spanish Latte')}.querySelector('.item-cell__name').click()`);
+  await evaluate(`${rowFor('Wireless Router')}.querySelector('.item-cell__name').click()`);
   await sleep(300);
   await waitFor(`document.readyState === 'complete' && location.pathname.endsWith('product-form.php')`, 'edit page');
   check((await text('.history-card tbody tr td:nth-child(2)')) === 'Opening stock', 'stock history starts with "Opening stock"');
   await shot('p3-6-product-edit');
 
   // --- Delete it (never sold) ---
-  await nav(`${BASE}/pages/inventory.php?search=spanish`);
+  await nav(`${BASE}/pages/inventory.php?search=router`);
   await evaluate(`window.confirm = () => true`);
-  await submitAndWait(`${rowFor('Spanish Latte')}.querySelector('form[data-confirm]')`);
-  check((await flash()) === 'Spanish Latte was deleted.', 'unsold product can be deleted');
-  await nav(`${BASE}/pages/inventory.php?search=latte`);
-  check(await evaluate(`${rowFor('Iced Latte')}.querySelector('form[data-confirm]') === null`), 'sold products have no Delete button');
+  await submitAndWait(`${rowFor('Wireless Router')}.querySelector('form[data-confirm]')`);
+  check((await flash()) === 'Wireless Router was deleted.', 'unsold product can be deleted');
+  await nav(`${BASE}/pages/inventory.php?search=keyboard`);
+  check(await evaluate(`${rowFor('Keyboard')}.querySelector('form[data-confirm]') === null`), 'sold products have no Delete button');
 
   // --- Customers ---
   await nav(`${BASE}/pages/customers.php`);

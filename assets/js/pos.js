@@ -1,5 +1,5 @@
 /**
- * Brew & Bean POS — product grid, cart, checkout, receipt printing, shortcuts.
+ * EXECOM Logistics POS — product grid, cart, checkout, receipt printing, shortcuts.
  *
  * Money is handled in integer centavos. The server recomputes every total on
  * checkout; the numbers here are only for display.
@@ -250,11 +250,11 @@
             media.appendChild(img);
         } else {
             media.classList.add('is-placeholder');
-            media.appendChild(svgIcon(p.category_icon || 'coffee'));
+            media.appendChild(svgIcon(p.category_icon || 'box'));
         }
 
         card.querySelector('.product-card__name').textContent = p.name;
-        card.querySelector('.product-card__code').textContent = `(${p.code})`;
+        card.querySelector('.product-card__code').textContent = p.code;
         card.querySelector('.product-card__price').textContent = fmt(p.price_cents);
 
         const pill = card.querySelector('.stock-pill');
@@ -488,12 +488,12 @@
         (isCash ? els.payAmount : els.payConfirm).focus();
     }
 
-    /** Exact amount + a few common bills at or above the total. */
+    /** Exact amount + the total rounded up to the next ₱100 / ₱500 / ₱1,000 / ₱5,000. */
     function buildQuickCash(totalCents) {
         const pesos = totalCents / 100;
         const options = new Set([totalCents]);
-        [Math.ceil(pesos / 50) * 50, Math.ceil(pesos / 100) * 100, 500, 1000, 2000]
-            .map((v) => v * 100)
+        [100, 500, 1000, 5000]
+            .map((step) => Math.ceil(pesos / step) * step * 100)
             .filter((v) => v > totalCents)
             .forEach((v) => options.add(v));
 

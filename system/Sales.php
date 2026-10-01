@@ -9,6 +9,8 @@ declare(strict_types=1);
 final class Sales
 {
     public const PAYMENT_TYPES = ['cash' => 'Cash', 'gcash' => 'GCash', 'card' => 'Card'];
+    /** Statuses shown in Sales History ('held' is unused). */
+    public const STATUSES  = ['completed' => 'Completed', 'cancelled' => 'Voided'];
     public const MAX_LINES = 100;
     public const MAX_QTY   = 999;
 
@@ -175,14 +177,16 @@ final class Sales
         ];
     }
 
-    /** Sale header + items for receipts. Null if not found. */
+    /** Sale header + items (receipts, sale details). Null if not found. */
     public static function find(int $id): ?array
     {
         $stmt = db()->prepare(
-            "SELECT s.*, u.full_name AS cashier_name, COALESCE(c.name, 'Walk-in Customer') AS customer_name
+            "SELECT s.*, u.full_name AS cashier_name, COALESCE(c.name, 'Walk-in Customer') AS customer_name,
+                    v.full_name AS voided_by_name
                FROM sales s
                JOIN users u ON u.id = s.user_id
                LEFT JOIN customers c ON c.id = s.customer_id
+               LEFT JOIN users v ON v.id = s.voided_by
               WHERE s.id = ?"
         );
         $stmt->execute([$id]);
@@ -192,12 +196,171 @@ final class Sales
         }
 
         $stmt = db()->prepare(
-            'SELECT product_code, product_name, unit_price, quantity, line_total
+            'SELECT product_id, product_code, product_name, unit_price, quantity, line_total
                FROM sale_items WHERE sale_id = ? ORDER BY id'
         );
         $stmt->execute([$id]);
         $sale['items'] = $stmt->fetchAll();
 
         return $sale;
+    }
+
+    // ------------------------------------------------------------------
+    // Sales History
+    // ------------------------------------------------------------------
+
+    /**
+     * @param array{q:string, from:?string, to:?string, status:string, payment:string, cashier:?int} $f
+     *        from/to are validated 'Y-m-d' dates (inclusive) or null.
+     */
+    public static function count(array $f): int
+    {
+        [$where, $params] = self::where($f);
+        $stmt = db()->prepare("SELECT COUNT(*) FROM sales s LEFT JOIN customers c ON c.id = s.customer_id WHERE {$where}");
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
+    }
+
+    public static function search(array $f, int $limit, int $offset): array
+    {
+        [$where, $params] = self::where($f);
+        $stmt = db()->prepare(
+            "SELECT s.id, s.sale_no, s.customer_id, s.payment_type, s.status, s.total, s.created_at,
+                    COALESCE(c.name, 'Walk-in Customer') AS customer_name, u.full_name AS cashier_name,
+                    (SELECT COALESCE(SUM(si.quantity), 0) FROM sale_items si WHERE si.sale_id = s.id) AS items
+               FROM sales s
+               JOIN users u ON u.id = s.user_id
+               LEFT JOIN customers c ON c.id = s.customer_id
+              WHERE {$where}
+              ORDER BY s.created_at DESC, s.id DESC
+              LIMIT ? OFFSET ?"
+        );
+        $stmt->execute([...$params, $limit, $offset]);
+        return $stmt->fetchAll();
+    }
+
+    /** Totals for the filtered period. The status filter is ignored so voids are always counted. */
+    public static function summary(array $f): array
+    {
+        [$where, $params] = self::where(['status' => 'all'] + $f);
+        $stmt = db()->prepare(
+            "SELECT COALESCE(SUM(s.status = 'completed'), 0) AS sales,
+                    COALESCE(SUM(CASE WHEN s.status = 'completed' THEN s.total END), 0) AS revenue,
+                    COALESCE(AVG(CASE WHEN s.status = 'completed' THEN s.total END), 0) AS average,
+                    COALESCE(SUM(s.status = 'cancelled'), 0) AS voided,
+                    COALESCE(SUM(CASE WHEN s.status = 'cancelled' THEN s.total END), 0) AS voided_total
+               FROM sales s LEFT JOIN customers c ON c.id = s.customer_id
+              WHERE {$where}"
+        );
+        $stmt->execute($params);
+        return $stmt->fetch();
+    }
+
+    private static function where(array $f): array
+    {
+        $where  = ["s.status IN ('completed', 'cancelled')"];
+        $params = [];
+        if ($f['q'] !== '') {
+            // Sale number, customer, or any item on the sale (name / code)
+            $where[] = '(s.sale_no LIKE ? OR c.name LIKE ? OR EXISTS (
+                            SELECT 1 FROM sale_items si
+                             WHERE si.sale_id = s.id AND (si.product_name LIKE ? OR si.product_code LIKE ?)))';
+            $like = like_pattern($f['q']);
+            array_push($params, $like, $like, $like, $like);
+        }
+        if ($f['from'] !== null) {
+            $where[]  = 's.created_at >= ?';
+            $params[] = $f['from'] . ' 00:00:00';
+        }
+        if ($f['to'] !== null) {
+            $where[]  = 's.created_at < ?'; // before the start of the next day
+            $params[] = (new DateTimeImmutable($f['to']))->modify('+1 day')->format('Y-m-d 00:00:00');
+        }
+        if (isset(self::STATUSES[$f['status']])) {
+            $where[]  = 's.status = ?';
+            $params[] = $f['status'];
+        }
+        if (isset(self::PAYMENT_TYPES[$f['payment']])) {
+            $where[]  = 's.payment_type = ?';
+            $params[] = $f['payment'];
+        }
+        if ($f['cashier'] !== null) {
+            $where[]  = 's.user_id = ?';
+            $params[] = $f['cashier'];
+        }
+        return [implode(' AND ', $where), $params];
+    }
+
+    /** Users who can appear as the cashier of a sale (for the filter). */
+    public static function cashiers(): array
+    {
+        $stmt = db()->prepare('SELECT id, full_name, username FROM users ORDER BY full_name');
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Void a completed sale: mark it cancelled and put every item back in stock
+     * (logged as 'void' in stock_movements) — all or nothing.
+     * Returns [sale_no, units returned].
+     */
+    public static function void(int $id, int $userId, string $reason): array
+    {
+        $len = mb_strlen($reason);
+        if ($len < 3 || $len > 255) {
+            throw new HttpException(422, 'Enter the reason for voiding (3–255 characters).');
+        }
+
+        $pdo = db();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare('SELECT id, sale_no, status FROM sales WHERE id = ? FOR UPDATE');
+            $stmt->execute([$id]);
+            $sale = $stmt->fetch() ?: throw new HttpException(404, 'Sale not found.');
+            if ($sale['status'] === 'cancelled') {
+                throw new HttpException(409, "Sale No. {$sale['sale_no']} is already voided.");
+            }
+            if ($sale['status'] !== 'completed') {
+                throw new HttpException(409, 'Only completed sales can be voided.');
+            }
+
+            // Units to return per product (products deleted since then have product_id NULL).
+            $stmt = $pdo->prepare(
+                'SELECT product_id, SUM(quantity) AS qty FROM sale_items
+                  WHERE sale_id = ? AND product_id IS NOT NULL GROUP BY product_id ORDER BY product_id'
+            );
+            $stmt->execute([$id]);
+            $returns = [];
+            foreach ($stmt->fetchAll() as $row) {
+                $returns[(int) $row['product_id']] = (int) $row['qty'];
+            }
+
+            $units = 0;
+            if ($returns) {
+                $in   = implode(',', array_fill(0, count($returns), '?'));
+                $stmt = $pdo->prepare("SELECT id, stock FROM products WHERE id IN ({$in}) ORDER BY id FOR UPDATE");
+                $stmt->execute(array_keys($returns));
+                $restock = $pdo->prepare('UPDATE products SET stock = stock + ? WHERE id = ?');
+                foreach ($stmt->fetchAll() as $p) {
+                    $qty = $returns[(int) $p['id']];
+                    $restock->execute([$qty, $p['id']]);
+                    Products::log((int) $p['id'], $userId, 'void', $qty, (int) $p['stock'] + $qty,
+                        "Voided sale No. {$sale['sale_no']}: {$reason}", $id);
+                    $units += $qty;
+                }
+            }
+
+            $pdo->prepare(
+                "UPDATE sales SET status = 'cancelled', voided_at = NOW(), voided_by = ?, void_reason = ? WHERE id = ?"
+            )->execute([$userId, $reason, $id]);
+
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+        return [$sale['sale_no'], $units];
     }
 }

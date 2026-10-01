@@ -30,8 +30,8 @@
         </a>
 
         <div class="sidebar__footer">
-            <strong>Brew &amp; Bean Coffee Shop</strong>
-            <small>Inventory <span>•</span> Sales <span>•</span> Customers</small>
+            <strong>EXECOM Logistics</strong>
+            <small>Inventory <span>•</span> Sales <span>•</span> Distribution</small>
             <small class="sidebar__version">v<?= e(config('app.version')) ?></small>
         </div>
     </div>
