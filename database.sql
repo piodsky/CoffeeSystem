@@ -10,6 +10,10 @@
 --    cashier / cashier123  (role: cashier)
 -- =====================================================================
 
+-- Silence the harmless "database exists" / "unknown table" notes that
+-- IF [NOT] EXISTS produces, so the import reports 0 warnings.
+SET @OLD_SQL_NOTES = @@SQL_NOTES, SQL_NOTES = 0;
+
 CREATE DATABASE IF NOT EXISTS coffee_db
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE coffee_db;
@@ -26,6 +30,7 @@ DROP TABLE IF EXISTS login_attempts;
 DROP TABLE IF EXISTS settings;
 DROP TABLE IF EXISTS users;
 SET FOREIGN_KEY_CHECKS = 1;
+SET SQL_NOTES = @OLD_SQL_NOTES;
 
 -- ---------------------------------------------------------------------
 -- Users & authentication
